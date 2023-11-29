@@ -39,66 +39,103 @@ ENV SHELL=/bin/bash
 
 # cleanup script for use after apt-get
 RUN echo '#! /bin/sh\n\
-env DEBIAN_FRONTEND=noninteractive apt-get autoremove -y\n\
-apt-get clean\n\
-find /var/lib/apt/lists -type f -delete\n\
-find /var/cache -type f -delete\n\
-find /var/log -type f -delete\n\
-exit 0\n\
-' > /cleanup && chmod +x /cleanup
+    env DEBIAN_FRONTEND=noninteractive apt-get autoremove -y\n\
+    apt-get clean\n\
+    find /var/lib/apt/lists -type f -delete\n\
+    find /var/cache -type f -delete\n\
+    find /var/log -type f -delete\n\
+    exit 0\n\
+    ' > /cleanup && chmod +x /cleanup
 
 # basics
 RUN apt-get update && \
     env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-      locales && \
-      echo "$LANG UTF-8" >> /etc/locale.gen && \
-      locale-gen && \
+    locales && \
+    echo "$LANG UTF-8" >> /etc/locale.gen && \
+    locale-gen && \
     env DEBIAN_FRONTEND=noninteractive apt-get install -y \
-      at-spi2-core \
-      dbus \
-      dbus-x11 \
-      libpulse0 \
-      procps \
-      psutils \
-      systemd \
-      x11-xserver-utils && \
+    at-spi2-core \
+    dbus \
+    dbus-x11 \
+    libpulse0 \
+    procps \
+    psutils \
+    systemd \
+    x11-xserver-utils && \
     /cleanup
 
 # Gnome 3
 RUN apt-get update && \
     env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-      gnome-session && \
+    gnome-session && \
     /cleanup
 
 # Gnome 3 apps
 RUN apt-get update && \
     env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-      cheese \
-      gedit \
-      gnome-control-center \
-      gnome-system-monitor \
-      gnome-terminal \
-      gnome-tweak-tool \
-      nautilus && \
+    # cheese \
+    # gedit \
+    # gnome-control-center \
+    # gnome-system-monitor \
+    # gnome-terminal \
+    # gnome-tweak-tool \
+    # nautilus && \
+    # old gnome-session-xsession \
+    gnome-control-center \
+    gnome-system-monitor \
+    gnome-session-bin \
+    gnome-extensions-app \
+    xvfb \
+    # old xorg-x11-server-Xvfb \
+    gnome-terminal \ 
+    xdotool \ 
+    xautomation \ 
+    sudo && \
     /cleanup
+
 
 # Gnome Shell extensions
 RUN apt-get update && \
     env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-      gnome-shell-extension* && \
+    gnome-shell-extension* && \
     /cleanup
 
-# Workaround to get gnome-session running. 
-# gnome-session fails if started directly. Running gnome-shell only works, but lacks configuration support.
-RUN apt-get update && \
-    env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-      guake && \
-    rm /usr/share/applications/guake.desktop /usr/share/applications/guake-prefs.desktop && \
-    echo "#! /bin/bash\n\
-guake -e gnome-session\n\
-while pgrep gnome-shell; do sleep 1 ; done\n\
-" >/usr/local/bin/startgnome && \
-    chmod +x /usr/local/bin/startgnome && \
-    /cleanup
+## Workaround to get gnome-session running. 
+## gnome-session fails if started directly. Running gnome-shell only works, but lacks configuration support.
+# RUN apt-get update && \
+#    env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+#      guake && \
+#    rm /usr/share/applications/guake.desktop /usr/share/applications/guake-prefs.desktop && \
+#    echo "#! /bin/bash\n\
+#guake -e gnome-session\n\
+#while pgrep gnome-shell; do sleep 1 ; done\n\
+#" >/usr/local/bin/startgnome && \
+#    chmod +x /usr/local/bin/startgnome && \
+#    /cleanup
 
-CMD /usr/local/bin/startgnome
+# Copy system configuration.
+COPY etc /etc
+
+# Start Xvfb via systemd on display :99.
+# Add the gnomeshell user with no password.
+RUN systemctl unmask systemd-logind.service console-getty.service getty.target && \
+    systemctl enable xvfb@:99.service && \
+    systemctl set-default multi-user.target
+
+#RUN adduser -m -U -G users,adm gnomeshell && \
+#    echo "gnomeshell     ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+# RUN adduser gnomeshell && \
+#    usermod -aG users,adm gnomeshell && \\
+#    echo "gnomeshell     ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+RUN useradd -rm -d /home/gnomeshell -s /bin/bash -g root -G sudo -u 1001 gnomeshell && \\
+echo "gnomeshell     ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+# Add the scripts.
+COPY bin /usr/local/bin
+
+CMD [ "/usr/sbin/init", "systemd.unified_cgroup_hierarchy=0" ]
+
+
+# CMD /usr/local/bin/startgnome
