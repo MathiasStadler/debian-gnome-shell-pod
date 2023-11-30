@@ -40,15 +40,16 @@ ENV SHELL=/bin/bash
 
 # FROM HERE
 # https://stackoverflow.com/questions/56757169/is-there-a-way-to-suppress-update-alternatives-warning-skip-creation-warning
+# exclude /usr/share/* data
 RUN \
-echo 'path-exclude /usr/share/doc/*' >/etc/dpkg/dpkg.cfg.d/docker-minimal && \ 
-echo 'path-exclude /usr/share/man/*' >>/etc/dpkg/dpkg.cfg.d/docker-minimal && \
-echo 'path-exclude /usr/share/groff/*' >>/etc/dpkg/dpkg.cfg.d/docker-minimal && \
-echo 'path-exclude /usr/share/info/*' >>/etc/dpkg/dpkg.cfg.d/docker-minimal && \
-echo 'path-exclude /usr/share/lintian/*' >>/etc/dpkg/dpkg.cfg.d/docker-minimal && \
-echo 'path-exclude /usr/share/linda/*' >>/etc/dpkg/dpkg.cfg.d/docker-minimal && \
-echo 'path-exclude /usr/share/locale/*' >>/etc/dpkg/dpkg.cfg.d/docker-minimal && \
-echo 'path-include /usr/share/locale/en*' >>/etc/dpkg/dpkg.cfg.d/docker-minimal
+    echo 'path-exclude /usr/share/doc/*' >/etc/dpkg/dpkg.cfg.d/docker-minimal && \ 
+    echo 'path-exclude /usr/share/man/*' >>/etc/dpkg/dpkg.cfg.d/docker-minimal && \
+    echo 'path-exclude /usr/share/groff/*' >>/etc/dpkg/dpkg.cfg.d/docker-minimal && \
+    echo 'path-exclude /usr/share/info/*' >>/etc/dpkg/dpkg.cfg.d/docker-minimal && \
+    echo 'path-exclude /usr/share/lintian/*' >>/etc/dpkg/dpkg.cfg.d/docker-minimal && \
+    echo 'path-exclude /usr/share/linda/*' >>/etc/dpkg/dpkg.cfg.d/docker-minimal && \
+    echo 'path-exclude /usr/share/locale/*' >>/etc/dpkg/dpkg.cfg.d/docker-minimal && \
+    echo 'path-include /usr/share/locale/en*' >>/etc/dpkg/dpkg.cfg.d/docker-minimal
 
 
 # cleanup script for use after apt-get
@@ -61,13 +62,23 @@ RUN echo '#! /bin/sh\n\
     exit 0\n\
     ' > /cleanup && chmod +x /cleanup
 
+RUN \
+    apt-get update && \
+    apt-get install -y locales apt-utils 
+RUN sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen 
+RUN dpkg-reconfigure locales 
+RUN update-locale LANG="en_US.UTF-8 UTF-8"
+ENV LANG "en_US.UTF-8 UTF-8"
+
+
+
 # basics
 RUN apt-get update && \
-    env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-    locales && \
-    echo "$LANG UTF-8" >> /etc/locale.gen && \
-    locale-gen && \
-    env DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    # env DEBIAN_FRONTEND=noninteractive apt-get install -qq --no-install-recommends \
+    # locales && \
+    # echo "$LANG UTF-8" >> /etc/locale.gen && \
+    # locale-gen && \
+    env DEBIAN_FRONTEND=noninteractive apt-get install -qq --no-install-recommends \
     at-spi2-core \
     dbus \
     dbus-x11 \
@@ -76,13 +87,13 @@ RUN apt-get update && \
     psutils \
     systemd \
     x11-xserver-utils 
-    # /cleanup
+# /cleanup
 
 # Gnome 3
 RUN apt-get update && \
     env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     gnome-session  
-    # /cleanup
+# /cleanup
 
 # Gnome 3 apps
 RUN apt-get update && \
@@ -105,14 +116,14 @@ RUN apt-get update && \
     xdotool \ 
     xautomation \ 
     sudo 
-    # /cleanup
+# /cleanup
 
 
 # Gnome Shell extensions
 RUN apt-get update && \
     env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     gnome-shell-extension* 
-    # /cleanup
+# /cleanup
 
 # tigervnc-standalone-server
 # FROM HERE
@@ -122,7 +133,7 @@ RUN apt-get update && \
     env DEBIAN_FRONTEND=noninteractive apt-get install -y  \
     tigervnc-standalone-server && \
     # tigervnc-common && \
-    tigervnc-tools && \
+    # tigervnc-tools && \
     iproute2 && \
     /cleanup
 
