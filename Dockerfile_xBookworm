@@ -37,6 +37,20 @@ FROM debian:bookworm-20231120-slim
 ENV LANG en_US.UTF-8
 ENV SHELL=/bin/bash
 
+
+# FROM HERE
+# https://stackoverflow.com/questions/56757169/is-there-a-way-to-suppress-update-alternatives-warning-skip-creation-warning
+RUN \
+echo 'path-exclude /usr/share/doc/*' >/etc/dpkg/dpkg.cfg.d/docker-minimal && \ 
+echo 'path-exclude /usr/share/man/*' >>/etc/dpkg/dpkg.cfg.d/docker-minimal && \
+echo 'path-exclude /usr/share/groff/*' >>/etc/dpkg/dpkg.cfg.d/docker-minimal && \
+echo 'path-exclude /usr/share/info/*' >>/etc/dpkg/dpkg.cfg.d/docker-minimal && \
+echo 'path-exclude /usr/share/lintian/*' >>/etc/dpkg/dpkg.cfg.d/docker-minimal && \
+echo 'path-exclude /usr/share/linda/*' >>/etc/dpkg/dpkg.cfg.d/docker-minimal && \
+echo 'path-exclude /usr/share/locale/*' >>/etc/dpkg/dpkg.cfg.d/docker-minimal && \
+echo 'path-include /usr/share/locale/en*' >>/etc/dpkg/dpkg.cfg.d/docker-minimal
+
+
 # cleanup script for use after apt-get
 RUN echo '#! /bin/sh\n\
     env DEBIAN_FRONTEND=noninteractive apt-get autoremove -y\n\
@@ -61,15 +75,14 @@ RUN apt-get update && \
     procps \
     psutils \
     systemd \
-    x11-xserver-utils && \
-    x11vnc && \
-    /cleanup
+    x11-xserver-utils 
+    # /cleanup
 
 # Gnome 3
 RUN apt-get update && \
     env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-    gnome-session && \
-    /cleanup
+    gnome-session  
+    # /cleanup
 
 # Gnome 3 apps
 RUN apt-get update && \
@@ -91,14 +104,26 @@ RUN apt-get update && \
     gnome-terminal \ 
     xdotool \ 
     xautomation \ 
-    sudo && \
-    /cleanup
+    sudo 
+    # /cleanup
 
 
 # Gnome Shell extensions
 RUN apt-get update && \
     env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-    gnome-shell-extension* && \
+    gnome-shell-extension* 
+    # /cleanup
+
+# tigervnc-standalone-server
+# FROM HERE
+# https://www.server-world.info/en/note?os=Debian_12&p=desktop&f=6
+RUN apt-get update && \
+    # env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    env DEBIAN_FRONTEND=noninteractive apt-get install -y  \
+    tigervnc-standalone-server && \
+    # tigervnc-common && \
+    tigervnc-tools && \
+    iproute2 && \
     /cleanup
 
 ## Workaround to get gnome-session running. 
@@ -130,8 +155,10 @@ RUN systemctl unmask systemd-logind.service console-getty.service getty.target &
 #    usermod -aG users,adm gnomeshell && \\
 #    echo "gnomeshell     ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
-RUN useradd -rm -d /home/gnomeshell -s /bin/bash -g root -G sudo -u 1001 gnomeshell && \\
-echo "gnomeshell     ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+# # useradd warning: gnomeshell's uid 1001 is greater than SYS_UID_MAX 999
+RUN useradd -rm -d /home/gnomeshell -s /bin/bash -g root -G sudo -u 777 gnomeshell 
+
+RUN echo "gnomeshell     ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 # Add the scripts.
 COPY bin /usr/local/bin
