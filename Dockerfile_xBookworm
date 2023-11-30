@@ -33,7 +33,7 @@
 #  - gnome-usage crashes with a segfault.
 #  - Wayland setups do not work.
 
-FROM debian:bookworm
+FROM debian:bookworm-20231120-slim
 ENV LANG en_US.UTF-8
 ENV SHELL=/bin/bash
 
@@ -62,6 +62,7 @@ RUN apt-get update && \
     psutils \
     systemd \
     x11-xserver-utils && \
+    x11vnc && \
     /cleanup
 
 # Gnome 3
